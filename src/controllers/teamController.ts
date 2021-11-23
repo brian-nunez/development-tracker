@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import _debug from 'debug';
 import { buildErrorMessage, ErrorResponse, ErrorType } from '../utils/errorBuilder';
 import Team, { cleanTeam, populateTeamData, TeamShape } from '../models/Team';
-import { UserShape } from '../models/User';
+import User, { UserShape } from '../models/User';
 import { SessionRequest } from '../middleware/authenticated';
 
 const debug = _debug(`${process.env.npm_package_name}:featureController`);
@@ -141,9 +141,127 @@ async function handleDeleteTeam(request: SessionRequest, response: Response) {
   }
 }
 
+async function handleOwnerChange(request: SessionRequest, response: Response) {
+  try {
+    const { slug, targetUserId } = request.body;
+    const user: UserShape = request.user;
+
+    const queryOptions = {
+      slug,
+      owner: user,
+    };
+
+    const team: TeamShape = await Team.findOne(queryOptions);
+
+    if (!team) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
+      debug(`handleOwnerChange: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const targetUser: UserShape = await User.findOne({ slug, userId: targetUserId });
+
+    if (!targetUser) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'User is not added to this team');
+      debug(`handleOwnerChange: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const userAdded = await Team.findOne({
+      slug,
+      members: {
+        '$in': [targetUser],
+      },
+    });
+
+    if (!userAdded) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'User is not on the team');
+      debug(`handleOwnerChange: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    team.owner = targetUser;
+
+    await team.save();
+    await populateTeamData(team);
+    const teamData = cleanTeam(team);
+
+    response.json(teamData);
+  } catch (e) {
+    const error: ErrorResponse = buildErrorMessage(ErrorType.INTERNAL_SERVER_ERROR);
+    debug(`Error handleOwnerChange: ${JSON.stringify(e)} - Response: ${JSON.stringify(error)}`);
+    response.status(error.http_status_code).send(error.error_message);
+    return;
+  }
+}
+
+async function handleAddTeamMember(request: SessionRequest, response: Response) {
+  try {
+    const { slug, userId } = request.body;
+    const user: UserShape = request.user;
+
+    const queryOptions = {
+      slug,
+      members: {
+        '$in': [user],
+      },
+    };
+
+    const team: TeamShape = await Team.findOne(queryOptions);
+
+    if (!team) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
+      debug(`handleAddTeamMember: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const targetUser: UserShape = await User.findOne({ userId });
+
+    if (!targetUser) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'User does not exist');
+      debug(`handleAddTeamMember: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const userAlreadyAdded = await Team.findOne({
+      slug,
+      members: {
+        '$in': [targetUser],
+      },
+    });
+
+    if (userAlreadyAdded) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'User is already added to team');
+      debug(`handleAddTeamMember: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    team.members.push(targetUser);
+
+    await team.save();
+    await populateTeamData(team);
+    const teamData = cleanTeam(team);
+
+    response.json(teamData);
+  } catch (e) {
+    const error: ErrorResponse = buildErrorMessage(ErrorType.INTERNAL_SERVER_ERROR);
+    debug(`Error handleAddTeamMember: ${JSON.stringify(e)} - Response: ${JSON.stringify(error)}`);
+    response.status(error.http_status_code).send(error.error_message);
+    return;
+  }
+}
+
 export default {
   handleCreateTeam,
   handleGetTeam,
   handleGetUserTeams,
   handleDeleteTeam,
+  handleOwnerChange,
+  handleAddTeamMember,
 };

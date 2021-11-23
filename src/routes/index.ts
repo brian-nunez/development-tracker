@@ -6,7 +6,7 @@ import authController from '../controllers/authController';
 import handleValidations from '../middleware/handleValidations';
 import handleErrors from '../middleware/handleErrors';
 import authenticated from '../middleware/authenticated';
-import featureController from '../controllers/featureController';
+import teamController from '../controllers/teamController';
 
 const initRoutes = (): Router => {
   const router = Router();
@@ -35,27 +35,43 @@ const initRoutes = (): Router => {
     body('slug').notEmpty().isString(),
     body('name').notEmpty().isString(),
     handleValidations,
-    featureController.handleCreateTeam,
+    teamController.handleCreateTeam,
     handleErrors,
   ])
   router.get('/team', [
     authenticated,
     query('slug').notEmpty().isString(),
     handleValidations,
-    featureController.handleGetTeam,
+    teamController.handleGetTeam,
     handleErrors,
   ]);
   router.get('/teams', [
     authenticated,
-    featureController.handleGetUserTeams,
+    teamController.handleGetUserTeams,
   ]);
   router.post('/delete-team', [
     authenticated,
     body('slug').notEmpty().isString(),
     handleValidations,
-    featureController.handleDeleteTeam,
+    teamController.handleDeleteTeam,
     handleErrors,
   ]);
+  router.post('/change-team-owner', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('targetUserId').notEmpty().isString(),
+    handleValidations,
+    teamController.handleOwnerChange,
+    handleErrors,
+  ]);
+  router.post('/add-team-member', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('userId').notEmpty().isString(),
+    handleValidations,
+    teamController.handleAddTeamMember,
+    handleErrors,
+  ])
 
   return router;
 }

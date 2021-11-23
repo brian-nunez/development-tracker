@@ -94,6 +94,7 @@ export function cleanUser(user: UserShape) {
     userId,
     email,
     avatar,
+    lastLogin,
   } = user;
 
   return {
@@ -102,6 +103,7 @@ export function cleanUser(user: UserShape) {
     userId,
     email,
     avatar,
+    lastLogin,
   };
 }
 

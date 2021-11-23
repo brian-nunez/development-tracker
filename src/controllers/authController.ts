@@ -46,6 +46,8 @@ async function handleLogin(request: SessionRequest, response: Response) {
       userId: user.userId,
     };
 
+    user.lastLogin = Date.now();
+    await user.save();
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
@@ -57,7 +59,6 @@ async function handleLogin(request: SessionRequest, response: Response) {
 
         debug('User successfully logged in');
         request.session.authToken = token;
-        request.session.user = user;
         response.json({
           success: true,
         });
@@ -126,13 +127,8 @@ async function handleLogout(request: Request, response: Response) {
   });
 }
 
-async function handleAccountData(request: Request, response: Response) {
-  response.send('nice');
-}
-
 export default {
   handleLogin,
   handleRegister,
   handleLogout,
-  handleAccountData,
 };
