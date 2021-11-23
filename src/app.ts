@@ -71,8 +71,6 @@ async function application(config: ConfigObject) {
   }));
   app.use(compression());
   app.use(express.static(path.join(__dirname, '../public')));
-  app.set('views', path.join(__dirname, '../views'));
-  app.set('view engine', 'ejs');
   app.set('config', config);
   app.use('/api/v1', routes.initRoutes());
   app.use(notFound);
