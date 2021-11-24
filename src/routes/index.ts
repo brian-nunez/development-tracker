@@ -49,14 +49,14 @@ const initRoutes = (): Router => {
     authenticated,
     teamController.handleGetUserTeams,
   ]);
-  router.post('/delete-team', [
+  router.post('/team/delete', [
     authenticated,
     body('slug').notEmpty().isString(),
     handleValidations,
     teamController.handleDeleteTeam,
     handleErrors,
   ]);
-  router.post('/change-team-owner', [
+  router.post('/team/change-owner', [
     authenticated,
     body('slug').notEmpty().isString(),
     body('targetUserId').notEmpty().isString(),
@@ -64,14 +64,43 @@ const initRoutes = (): Router => {
     teamController.handleOwnerChange,
     handleErrors,
   ]);
-  router.post('/add-team-member', [
+  router.post('/team/add-member', [
     authenticated,
     body('slug').notEmpty().isString(),
     body('userId').notEmpty().isString(),
     handleValidations,
     teamController.handleAddTeamMember,
     handleErrors,
-  ])
+  ]);
+  router.post('/team/add-story', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('name').notEmpty().isString(),
+    handleValidations,
+    teamController.handleAddStory,
+    handleErrors,
+  ]);
+  router.post('/team/delete-story', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('storyId').notEmpty().isString(),
+    handleValidations,
+    teamController.handleDeleteStory,
+    handleErrors,
+  ]);
+  router.post('/team/update-story', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('storyId').notEmpty().isString(),
+    body('name').optional().notEmpty().isString(),
+    body('estimate').optional().notEmpty().isNumeric(),
+    body('notes').optional().notEmpty().isString(),
+    body('acceptenceCriteria').optional().notEmpty().isString(),
+    body('status').optional().notEmpty().isString(),
+    handleValidations,
+    teamController.handleStoryUpdate,
+    handleErrors,
+  ]);
 
   return router;
 }

@@ -1,9 +1,10 @@
 import { Response } from 'express';
 import _debug from 'debug';
 import { buildErrorMessage, ErrorResponse, ErrorType } from '../utils/errorBuilder';
-import Team, { cleanTeam, populateTeamData, TeamShape } from '../models/Team';
+import Team, { cleanTeam, populateTeamData, TeamShape, deleteTeamData } from '../models/Team';
 import User, { UserShape } from '../models/User';
 import { SessionRequest } from '../middleware/authenticated';
+import Story, { cleanStory, createUniqueStoryId, deleteStoryData, populateStoryData } from '../models/Story';
 
 const debug = _debug(`${process.env.npm_package_name}:featureController`);
 
@@ -121,14 +122,17 @@ async function handleDeleteTeam(request: SessionRequest, response: Response) {
       owner: user,
     };
 
-    const deleteResult = await Team.deleteOne(queryOptions);
+    const team = await Team.findOne(queryOptions);
 
-    if (deleteResult.deletedCount === 0) {
+    if (!team) {
       const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
       debug(`handleDeleteTeam: ${JSON.stringify(error)}`);
       response.status(error.http_status_code).send(error.error_message);
       return;
     }
+
+    await deleteTeamData(team);
+    await Team.deleteOne(queryOptions);
 
     debug(`Successfully deleted team - ${slug}`);
 
@@ -257,6 +261,169 @@ async function handleAddTeamMember(request: SessionRequest, response: Response) 
   }
 }
 
+async function handleAddStory(request: SessionRequest, response: Response) {
+  try {
+    const {
+      slug,
+      name,
+    } = request.body;
+    const user: UserShape = request.user;
+
+    const queryOptions = {
+      slug,
+      members: {
+        '$in': [user],
+      },
+    };
+
+    const team = await Team.findOne(queryOptions);
+
+    if (!team) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
+      debug(`handleAddStory: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const story = new Story({
+      name,
+      storyId: await createUniqueStoryId(),
+      owner: user,
+      tasks: [],
+      estimate: 0,
+      notes: '',
+      acceptenceCriteria: '',
+    });
+
+    await story.save();
+    team.backlog.push(story);
+    await team.save();
+
+    const storyData = cleanStory(story);
+
+    response.json(storyData);
+  } catch (e) {
+    const error: ErrorResponse = buildErrorMessage(ErrorType.INTERNAL_SERVER_ERROR);
+    debug(`Error handleAddStory: ${JSON.stringify(e)} - Response: ${JSON.stringify(error)}`);
+    response.status(error.http_status_code).send(error.error_message);
+    return;
+  }
+}
+
+async function handleDeleteStory(request: SessionRequest, response: Response) {
+  try {
+    const { slug, storyId } = request.body;
+    const user: UserShape = request.user;
+
+    const story = await Story.findOne({ storyId });
+
+    if (!story) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Story does not exist');
+      debug(`handleDeleteStory: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const team = await Team.findOne({
+      slug,
+      members: {
+        '$in': [user],
+      },
+      backlog: {
+        '$in': [story],
+      },
+    });
+
+    if (!team) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
+      debug(`handleDeleteStory: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    await deleteStoryData(story);
+    await Story.deleteOne({ storyId: story.storyId });
+
+
+    response.json({ success: true });
+  } catch (e) {
+    const error: ErrorResponse = buildErrorMessage(ErrorType.INTERNAL_SERVER_ERROR);
+    debug(`Error handleDeleteStory: ${JSON.stringify(e)} - Response: ${JSON.stringify(error)}`);
+    response.status(error.http_status_code).send(error.error_message);
+    return;
+  }
+}
+
+async function handleStoryUpdate(request: SessionRequest, response: Response) {
+  try {
+    const {
+      slug,
+      storyId,
+      name,
+      estimate,
+      notes,
+      acceptenceCriteria,
+      status,
+    } = request.body;
+    const user: UserShape = request.user;
+
+    const story = await Story.findOne({ storyId });
+
+    if (!story) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Story does not exist');
+      debug(`handleStoryUpdate: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    const team = await Team.findOne({
+      slug,
+      members: {
+        '$in': [user],
+      },
+      backlog: {
+        '$in': [story],
+      },
+    });
+
+    if (!team) {
+      const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'Team does not exist');
+      debug(`handleDeleteStory: ${JSON.stringify(error)}`);
+      response.status(error.http_status_code).send(error.error_message);
+      return;
+    }
+
+    if (name) {
+      story.name = name;
+    }
+    if (estimate) {
+      story.estimate = estimate;
+    }
+    if (notes) {
+      story.notes = notes;
+    }
+    if (acceptenceCriteria) {
+      story.acceptenceCriteria = acceptenceCriteria;
+    }
+    if (status) {
+      story.status = status;
+    }
+
+    await story.save();
+
+    await populateStoryData(story);
+    const cleanedStory = cleanStory(story);
+
+
+    response.json(cleanedStory);
+  } catch (e) {
+    const error: ErrorResponse = buildErrorMessage(ErrorType.INTERNAL_SERVER_ERROR);
+    debug(`Error handleStoryUpdate: ${JSON.stringify(e)} - Response: ${JSON.stringify(error)}`);
+    response.status(error.http_status_code).send(error.error_message);
+    return;
+  }
+}
+
 export default {
   handleCreateTeam,
   handleGetTeam,
@@ -264,4 +431,7 @@ export default {
   handleDeleteTeam,
   handleOwnerChange,
   handleAddTeamMember,
+  handleAddStory,
+  handleDeleteStory,
+  handleStoryUpdate,
 };

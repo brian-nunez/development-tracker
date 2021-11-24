@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import _debug from 'debug';
 import { cleanUser, UserShape } from './User';
 import { FeatureShape } from './Feature';
-import { StoryShape } from './Story';
+import Story, { cleanStory, StoryShape } from './Story';
 
 const debug = _debug(`${process.env.npm_package_name}:models:Team`);
 
@@ -66,6 +66,17 @@ export async function populateTeamData(team: TeamShape): Promise<void> {
   await team.populate(fieldsToPopulate);
 }
 
+export async function deleteTeamData(team: TeamShape): Promise<void> {
+  // TODO: delete features
+  const storyIds: string = team.backlog.map(s => s.storyId).join('|');
+  
+  await Story.deleteMany({
+    storyId: new RegExp(`${storyIds}`, 'g'),
+  });
+
+  await team.save();
+}
+
 export function cleanTeam(team: TeamShape) {
   const {
     _id: id,
@@ -84,7 +95,7 @@ export function cleanTeam(team: TeamShape) {
     owner: cleanUser(owner),
     features,
     members: members.map(member => cleanUser(member)),
-    backlog,
+    backlog: backlog.map(story => cleanStory(story)),
   }
 }
 
