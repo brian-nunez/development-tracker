@@ -3,7 +3,9 @@
   "extends": [
     "tslint:recommended"
   ],
-  "jsRules": {},
+  "jsRules": {
+    "quotes": [2, "single", { "avoidEscape": true }]
+  },
   "rules": {
     "no-console": false
   },

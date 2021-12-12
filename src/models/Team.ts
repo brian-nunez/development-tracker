@@ -2,7 +2,7 @@ import { Schema, model, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import _debug from 'debug';
 import { cleanUser, UserShape } from './User';
-import { FeatureShape } from './Feature';
+import Feature, { cleanFeature, FeatureShape } from './Feature';
 import Story, { cleanStory, StoryShape } from './Story';
 
 const debug = _debug(`${process.env.npm_package_name}:models:Team`);
@@ -67,11 +67,19 @@ export async function populateTeamData(team: TeamShape): Promise<void> {
 }
 
 export async function deleteTeamData(team: TeamShape): Promise<void> {
-  // TODO: delete features
-  const storyIds: string = team.backlog.map(s => s.storyId).join('|');
+  function idsToRegex(array: any[], idProp: string): RegExp {
+    const ids = array.map(s => s[idProp]).join('|');
+    return new RegExp(`${ids}`, 'g');
+  }
+  const storyRegex: RegExp = idsToRegex(team.backlog, 'storyId');
+  const featureRegex: RegExp = idsToRegex(team.features, 'featureId');
   
   await Story.deleteMany({
-    storyId: new RegExp(`${storyIds}`, 'g'),
+    storyId: storyRegex,
+  });
+
+  await Feature.deleteMany({
+    featureIds: featureRegex,
   });
 
   await team.save();
@@ -93,7 +101,7 @@ export function cleanTeam(team: TeamShape) {
     slug,
     name,
     owner: cleanUser(owner),
-    features,
+    features: features.map(feature => cleanFeature(feature)),
     members: members.map(member => cleanUser(member)),
     backlog: backlog.map(story => cleanStory(story)),
   }

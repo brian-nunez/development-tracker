@@ -21,18 +21,18 @@ async function handleLogin(request: SessionRequest, response: Response) {
         password,
       },
     } = request;
-  
+
     const user = await User.findOne({ email });
-    
+
     if (!user) {
       const error: ErrorResponse = buildErrorMessage(ErrorType.NOT_FOUND, 'User does not exist');
       debug(`handleLogin: ${JSON.stringify(error)}`);
       response.status(error.http_status_code).send(error.error_message);
       return;
     }
-  
+
     const isPasswordMatch: boolean = await comparePassword(password, user.password);
-  
+
     if (!isPasswordMatch) {
       const error: ErrorResponse = buildErrorMessage(ErrorType.INVALID_REQUEST, 'Incorrect Combination');
       debug(`handleLogin: ${JSON.stringify(error)}`);

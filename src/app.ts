@@ -61,13 +61,13 @@ async function application(config: ConfigObject) {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: false }));
   app.use(session({
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    store: sessionStore,
-    saveUninitialized: true,
     cookie: {
       maxAge: ms('1 day'),
     },
+    resave: false,
+    saveUninitialized: true,
+    secret: process.env.SESSION_SECRET,
+    store: sessionStore,
   }));
   app.use(compression());
   app.use(express.static(path.join(__dirname, '../public')));

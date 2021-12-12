@@ -6,7 +6,7 @@ import User, { UserShape } from '../models/User';
 import { SessionRequest } from '../middleware/authenticated';
 import Story, { cleanStory, createUniqueStoryId, deleteStoryData, populateStoryData } from '../models/Story';
 
-const debug = _debug(`${process.env.npm_package_name}:featureController`);
+const debug = _debug(`${process.env.npm_package_name}:teamController`);
 
 async function handleCreateTeam(request: SessionRequest, response: Response) {
   try {

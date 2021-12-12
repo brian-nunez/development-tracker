@@ -7,6 +7,7 @@ import handleValidations from '../middleware/handleValidations';
 import handleErrors from '../middleware/handleErrors';
 import authenticated from '../middleware/authenticated';
 import teamController from '../controllers/teamController';
+import featureController from '../controllers/featureController';
 
 const initRoutes = (): Router => {
   const router = Router();
@@ -99,6 +100,37 @@ const initRoutes = (): Router => {
     body('status').optional().notEmpty().isString(),
     handleValidations,
     teamController.handleStoryUpdate,
+    handleErrors,
+  ]);
+  router.post('/feature', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('name').notEmpty().isString(),
+    handleValidations,
+    featureController.handleCreateFeature,
+    handleErrors,
+  ]);
+  router.get('/features', [
+    authenticated,
+    query('slug').notEmpty().isString(),
+    handleValidations,
+    featureController.handleGetAllFeatures,
+    handleErrors,
+  ]);
+  router.get('/feature', [
+    authenticated,
+    query('slug').notEmpty().isString(),
+    query('featureId').notEmpty().isString(),
+    handleValidations,
+    featureController.handleGetFeature,
+    handleErrors,
+  ]);
+  router.delete('/feature', [
+    authenticated,
+    body('slug').notEmpty().isString(),
+    body('featureId').notEmpty().isString(),
+    handleValidations,
+    featureController.handleDeleteFeature,
     handleErrors,
   ]);
 

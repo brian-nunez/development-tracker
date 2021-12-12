@@ -2,6 +2,7 @@ enum ErrorType {
   INVALID_REQUEST = 'INVALID_REQUEST',
   UNAUTHORIZED = 'UNAUTHORIZED',
   NOT_FOUND = 'NOT_FOUND',
+  NOT_ALLOWED = 'NOT_ALLOWED',
   INTERNAL_SERVER_ERROR = 'INTERNAL_SERVER_ERROR',
   SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE',
 }
@@ -39,6 +40,13 @@ const errorConstants: Errors = {
     error_message: {
       error_code: 'NOT_FOUND',
       error_message: 'Not Found',
+    },
+  },
+  NOT_ALLOWED: {
+    http_status_code: 405,
+    error_message: {
+      error_code: 'NOT_ALLOWED',
+      error_message: 'Not Allowed',
     },
   },
   INTERNAL_SERVER_ERROR: {
